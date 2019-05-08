@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!--
+	<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+	-->
+  </head>
+  <body>
+    <video
+      id="v1"
+      width="400"
+      height="300"
+      controls="controls"
+      muted="muted"
+    ></video>
+    <!--
+	<video data-dashjs-player autoplay src="test_dash.mpd" width=400 height=300 controls>
+	</video>
+	
+	<video src="test.mp4" width=400 height=300 controls>
+	</video>
+	-->
+
+    <script>
+      document.addEventListener(
+        "DOMContentLoaded",
+        function() {
+          window.MediaSource = window.MediaSource || window.WebKitMediaSource
+          var video = document.getElementById("v1")
+          var wsUri = "ws://10.200.2.46:9002/101"
+          var mimeCodec = 'video/mp4; codecs="avc1.4D002A"'
+
+          if (
+            ("MediaSource" in window &&
+              MediaSource.isTypeSupported(mimeCodec)) == false
+          ) {
+            console.error("Unsupported MIME type or codec: ", mimeCodec)
+          }
+
+          var mediaSource = new MediaSource()
+          video.src = URL.createObjectURL(mediaSource)
+
+          if (video.readyState >= video.HAVE_NOTHING) {
+            setTimeout(function() {
+              video.play()
+            }, 100)
+          } else {
+            video.addEventListener(
+              "canplay",
+              function() {
+                video.play()
+                console.log("video can play!")
+              },
+              false
+            )
+          }
+
+          function show() {
+            //console.log(mediaSource.readyState) // closed
+
+            mediaSource.addEventListener("sourceopen", function(e) {
+              console.log(e.target || this)
+              var mediaSource = e.target
+              var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec)
+              var bufferMode = sourceBuffer.mode
+              if (bufferMode == "segments") {
+                sourceBuffer.mode = "sequence"
+              }
+
+              var websocket = new WebSocket(wsUri)
+              websocket.binaryType = "arraybuffer"
+              websocket.onopen = function(evt) {}
+              websocket.onclose = function(evt) {}
+
+              var packages = new Array()
+
+              sourceBuffer.addEventListener("update", function(_) {
+                try {
+                  //console.log("sourceBuffer.updating:" + sourceBuffer.updating)
+                  if (sourceBuffer.updating == false && packages.length > 0) {
+                    var p = packages[0]
+                    sourceBuffer.appendBuffer(p)
+
+                    packages.shift()
+                    //  console.log("update end")
+                  }
+                } catch (e) {
+                  console.log("sourceBuffer.appendBuffer = " + e.toString())
+                }
+              })
+
+              function is_ftyp(d) {
+                return (
+                  d.length > 8 &&
+                  d[4] == 0x66 &&
+                  d[5] == 0x74 &&
+                  d[6] == 0x79 &&
+                  d[7] == 0x70
+                )
+              }
+              function is_moof(d) {
+                return (
+                  d.length > 8 &&
+                  d[4] == 0x6d &&
+                  d[5] == 0x6f &&
+                  d[6] == 0x6f &&
+                  d[7] == 0x66
+                )
+              }
+
+              function is_iframe(d) {
+                if (is_moof(d)) {
+                  return d.length > 116 && d[116] == 0x65
+                }
+                return false
+              }
+
+              var find_first_iframe = false
+
+              websocket.onmessage = function(evt) {
+                //console.log("packages.length=" + packages.length)
+                if (document.hidden) {
+                  find_first_iframe = false
+                  return
+                }
+
+                var d = new Uint8Array(evt.data)
+                if (find_first_iframe == false && is_moof(d)) {
+                  if (is_iframe(d) == false) {
+                    return
+                  } else {
+                    find_first_iframe = true
+                  }
+                }
+
+                if (is_iframe(d) && packages.length >= 10) {
+                  packages = []
+                  console.log("********key= 0x65")
+                }
+
+                packages.push(evt.data)
+
+                if (sourceBuffer.updating == false && packages.length > 0) {
+                  try {
+                    var p = packages[0]
+                    sourceBuffer.appendBuffer(p)
+                    packages.shift()
+                  } catch (e) {
+                    console.log("sourceBuffer.appendBuffer = " + e.toString())
+                  }
+                }
+
+                //console.log(evt.data)
+              }
+              websocket.onerror = function(evt) {}
+            })
+          }
+          show()
+        },
+        false
+      )
+    </script>
+  </body>
+</html>

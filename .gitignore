@@ -1,0 +1,5 @@
+/Debug/**
+/x64/**
+/rtsp2fmp4/Debug/**
+.vs/**
+/rtsp2fmp4/x64/**

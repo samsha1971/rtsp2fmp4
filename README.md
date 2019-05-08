@@ -8,7 +8,7 @@ c++写的 rtsp2fmp4 是一个服务器，通过 RTSP 访问摄像机的 RTSP 服
 
 ### 测试方法:
 
-1.修改 fmp4_server.cpp 的代码
+1.修改 fmp4_server.cpp 的代码，改成自己的RTSP服务地址。
 
     proxy.insert(std::pair<std::string, std::string>("/101", "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"));
 

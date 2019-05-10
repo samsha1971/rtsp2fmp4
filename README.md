@@ -8,10 +8,17 @@ c++写的 rtsp2fmp4 是一个服务器，通过 RTSP 访问摄像机的 RTSP 服
 
 ### 测试方法:
 
-1.修改 fmp4_server.cpp 的代码，改成自己的RTSP服务地址。
+1.需要 boost 1.69.0。
 
-    proxy.insert(std::pair<std::string, std::string>("/101", "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"));
+2.修改 config.json。
 
-2.运行#rtsp2fmp4，监控端口 9002，
+    [
+        {
+            "source": "/101",
+            "target": "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"
+        }
+    ]
 
-3.测试依赖 nodejs，在 exmaple 目录下运行#node http.js，网页访问：http://localhost:9080/index.html。
+3.运行#rtsp2fmp4，监控端口 9002。
+
+4.测试依赖 nodejs，在 exmaple 目录下运行#node http.js，网页访问：http://localhost:9080/index.html。

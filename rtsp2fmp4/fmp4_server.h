@@ -1,8 +1,11 @@
 #pragma once
+#pragma warning(disable : 4996)
+#pragma warning(disable : 4267)
 
 #include <set>
 #include <map>
 #include <string>
+
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 

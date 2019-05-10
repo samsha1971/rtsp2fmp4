@@ -11,7 +11,6 @@
 #include <fstream>
 #include  <direct.h> 
 
-
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
@@ -20,19 +19,19 @@ using namespace websocketpp::http::parser;
 std::string getConfig() {
 	
 	char db[255];
-	_getcwd(db, 255);
+	char * t = _getcwd(db, 255);
 	std::string path = db;
-	path += "/config.json";
+	path += "\\config.json";
 
-	std::wifstream f(path, std::ifstream::in);
-	f.imbue(std::locale(std::locale("chs"), new std::codecvt_utf8<wchar_t>()));
+	std::wifstream f(path.data(), std::ifstream::in);
+	f.imbue(std::locale(std::locale("chs"), new std::codecvt_utf8<wchar_t>));
 	std::wstring ws;
 	wchar_t c;
 	while (f.get(c))
 	{
 		ws += c;
 	}
-
+	
 	std::wstring_convert<std::codecvt<wchar_t, char, mbstate_t>> conv(new std::codecvt<wchar_t, char, mbstate_t>("chs"));
 	std::string s = conv.to_bytes(ws);
 
@@ -47,7 +46,7 @@ FMp4Server::FMp4Server(UsageEnvironment* env, int port) {
 	rapidjson::Document jsonDoc;
 	jsonDoc.Parse(cfg.data());
 	rapidjson::Value vs = jsonDoc.GetArray();
-	for (int i = 0; i < vs.Size(); i++)
+	for (uint32_t i = 0; i < vs.Size(); i++)
 	{
 		const rapidjson::Value& v = vs[i];
 		proxy.insert(std::pair<std::string, std::string>(v["source"].GetString(), v["target"].GetString()));

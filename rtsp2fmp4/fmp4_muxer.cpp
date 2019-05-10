@@ -1,10 +1,8 @@
+
 #include "fmp4_muxer.h"
 #include <WinSock2.h>
 //#pragma comment(lib,"ws2_32.lib")
 #pragma pack(push,1)
-
-#pragma warning(disable : 4996) 
-
 
 // Level Base
 class BaseBox {
@@ -302,7 +300,7 @@ public:
 	HdlrBox() {
 		FullBaseBox::boxsize = htonl(sizeof(HdlrBox));
 		FullBaseBox::boxtype = htonl(0X68646C72);
-		strcpy(name, "VideoHandler");
+		strcpy_s(name, "VideoHandler");
 	};
 	uint32_t pre_defined = 0;
 	uint32_t handler_type = htonl(0x76696465);

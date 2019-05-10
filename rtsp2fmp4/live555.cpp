@@ -1,7 +1,6 @@
 ﻿#include "live555.h"
 #include "fmp4_muxer.h"
-#include "fmp4_server.h"
-
+#include "fmp4_server.h" 
 
 UsageEnvironment& operator<<(UsageEnvironment& env, const RTSPClient& rtspClient) {
 	return env << "[URL:\"" << rtspClient.url() << "\"]: ";
@@ -402,7 +401,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 		(strcmp(fSubsession.codecName(), "H264") == 0))
 	{
 
-		for (auto & p : rtspClient.conns) {
+		for (auto& p : rtspClient.conns) {
 			// hdl : p.first
 			// muxer: p.second
 			if (p.second.frame_number == 0) {
@@ -419,7 +418,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 					fi.sps_size = spps[0].sPropLength;
 					fi.pps = spps[1].sPropBytes;
 					fi.pps_size = spps[1].sPropLength;
-					size = p.second.generate_ftyp_moov(data,fi);
+					size = p.second.generate_ftyp_moov(data, fi);
 					rtspClient.fmp4Server->send(p.first, data, size);
 					free(data);
 				}

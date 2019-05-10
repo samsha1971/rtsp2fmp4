@@ -60,7 +60,7 @@
             //console.log(mediaSource.readyState) // closed
 
             mediaSource.addEventListener("sourceopen", function(e) {
-              console.log(e.target || this)
+              //console.log(e.target || this)
               var mediaSource = e.target
               var sourceBuffer = mediaSource.addSourceBuffer(mimeCodec)
               var bufferMode = sourceBuffer.mode
@@ -117,15 +117,28 @@
               }
 
               var find_first_iframe = false
-
+              var first_frame = true
               websocket.onmessage = function(evt) {
                 //console.log("packages.length=" + packages.length)
+                var d = new Uint8Array(evt.data)
+                if (first_frame) {
+                  if (d[527] == 0x67) {
+                    mimeCodec =
+                      'video/mp4; codecs="avc1.' +
+                      d[528].toString(16) +
+                      d[529].toString(16) +
+                      d[530].toString(16) +
+                      '"'
+                    console.log("Video actual codec:'" + mimeCodec + "'")
+                  }
+                  first_frame = false
+                }
+
                 if (document.hidden) {
                   find_first_iframe = false
                   return
                 }
 
-                var d = new Uint8Array(evt.data)
                 if (find_first_iframe == false && is_moof(d)) {
                   if (is_iframe(d) == false) {
                     return
@@ -136,7 +149,7 @@
 
                 if (is_iframe(d) && packages.length >= 10) {
                   packages = []
-                  console.log("********key= 0x65")
+                  console.log("Too many packets cached, clear it.")
                 }
 
                 packages.push(evt.data)

@@ -32,6 +32,7 @@ public:
 
 	uint8_t sps_pps[48] = {0};
 	
+	/*
 	//sps
 	uint8_t  num_sequence_parameter_sets = 0Xe1; //前面3位是reserved,后面5位有效。
 	uint16_t sequence_parameter_set_length = htons(0x0014);
@@ -47,6 +48,7 @@ public:
 	uint8_t  num_picture_parameter_sets = 1;
 	uint16_t picture_parameter_set_length = htons(0x0004);
 	uint8_t  picture_parameter_set[4] = { 0X68, 0Xee, 0X3c, 0X80 };
+	*/
 	
 };
 

@@ -16,6 +16,11 @@ using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 using namespace websocketpp::http::parser;
 
+class chs_codecvt : public std::codecvt_byname<wchar_t, char, std::mbstate_t> {
+public:
+	chs_codecvt() : codecvt_byname("chs") { }
+};
+
 std::string getConfig() {
 	
 	char db[255];
@@ -24,15 +29,16 @@ std::string getConfig() {
 	path += "\\config.json";
 
 	std::wifstream f(path.data(), std::ifstream::in);
-	f.imbue(std::locale(std::locale("chs"), new std::codecvt_utf8<wchar_t>));
+	std::codecvt_utf8<wchar_t>* cu = new std::codecvt_utf8<wchar_t>();
+	std::locale cl = std::locale(std::locale("chs"), cu);
+	f.imbue(cl);
 	std::wstring ws;
 	wchar_t c;
 	while (f.get(c))
 	{
 		ws += c;
 	}
-	
-	std::wstring_convert<std::codecvt<wchar_t, char, mbstate_t>> conv(new std::codecvt<wchar_t, char, mbstate_t>("chs"));
+	std::wstring_convert<chs_codecvt> conv(new chs_codecvt());
 	std::string s = conv.to_bytes(ws);
 
 	return s;

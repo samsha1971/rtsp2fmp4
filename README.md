@@ -38,4 +38,4 @@ Rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Wind
 ```
 4. Run #rtsp2fmp4, monitor port is 9002.
 
-3. The test relies on nodejs, in exmaple directory run #node http.js, web access: http://localhost:9080/index.html.
+5. The test relies on nodejs, in exmaple directory run #node http.js, web access: http://localhost:9080/index.html.

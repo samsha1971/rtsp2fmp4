@@ -23,13 +23,22 @@ Rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Wind
 ### Test
 
 1. Compile live555, boost 1.69.0, modify  CMakeLists.txt in the source directory, confirm include and lib's directories.
+
 2. Configure  Visual Studio 2017/2019 Cross Platform.
+
 3. Modify config.json:
+
+```
 [
-{
-"Source" : "/ 101",
-"Target" : "rtsp: / / sam: ibc960014@10.200.2.229 / Streaming/Channels / 101"
-}
+    {
+        "source" : "/101",
+        "target" : "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"
+    }
 ]
-2. Run #rtsp2fmp4, monitor port is 9002.
+```
+4. Run #rtsp2fmp4, monitor port is 9002.
+
 3. The test relies on nodejs, in exmaple directory run #node http.js, web access: http://localhost:9080/index.html.
+  ```
+
+  ```

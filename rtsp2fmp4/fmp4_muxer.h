@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 
+
 class FMp4Info {
 public:
 	uint8_t* sps;
@@ -23,10 +24,10 @@ public:
 	FMp4Muxer();
 	~FMp4Muxer();
 public:
-	uint32_t generate_ftyp_moov(uint8_t * & fmp4_header, FMp4Info fi);
-	uint32_t generate_moof_mdat(uint8_t * &frame, uint32_t frame_size);
-	
-//private:
+	uint32_t generate_ftyp_moov(uint8_t*& fmp4_header, FMp4Info fi);
+	uint32_t generate_moof_mdat(uint8_t*& frame, uint32_t frame_size);
+
+	//private:
 	int frame_number;
 };
 

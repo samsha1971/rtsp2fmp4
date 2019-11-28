@@ -29,8 +29,8 @@ protected:
 	void on_open(connection_hdl hdl);
 	void on_close(connection_hdl hdl);
 	void on_message(connection_hdl hdl, server::message_ptr msg);
-	server m_server;	
-	std::set <MyRTSPClient *> m_rcs;
+	server m_server;
+	std::set <MyRTSPClient*> m_rcs;
 	UsageEnvironment* env;
 	std::map<std::string, std::string> proxy;
 };

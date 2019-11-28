@@ -97,7 +97,7 @@ void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultS
 
 
 // 海康不支持UDP，但无法从协议反馈中看出来。
-#define REQUEST_STREAMING_OVER_TCP TRUE
+#define REQUEST_STREAMING_OVER_TCP true
 
 void setupNextSubsession(RTSPClient* rtspClient) {
 	UsageEnvironment& env = rtspClient->envir(); // alias
@@ -212,7 +212,7 @@ void continueAfterPLAY(RTSPClient* rtspClient, int resultCode, char* resultStrin
 		}
 		env << "...\n";
 
-		success = True;
+		success = true;
 	} while (0);
 	delete[] resultString;
 
@@ -265,7 +265,7 @@ void streamTimerHandler(void* clientData) {
 	shutdownStream(rtspClient);
 }
 
-void shutdownStream(RTSPClient * rtspClient, int exitCode) {
+void shutdownStream(RTSPClient* rtspClient, int exitCode) {
 	UsageEnvironment& env = rtspClient->envir(); // alias
 	StreamClientState& scs = ((MyRTSPClient*)rtspClient)->scs; // alias
 
@@ -284,7 +284,7 @@ void shutdownStream(RTSPClient * rtspClient, int exitCode) {
 					subsession->rtcpInstance()->setByeHandler(NULL, NULL); // in case the server sends a RTCP "BYE" while handling "TEARDOWN"
 				}
 
-				someSubsessionsWereActive = True;
+				someSubsessionsWereActive = true;
 			}
 		}
 
@@ -308,11 +308,11 @@ void shutdownStream(RTSPClient * rtspClient, int exitCode) {
 }
 
 
-MyRTSPClient* MyRTSPClient::createNew(UsageEnvironment & env, char const* rtspURL) {
+MyRTSPClient* MyRTSPClient::createNew(UsageEnvironment& env, char const* rtspURL) {
 	return new MyRTSPClient(env, rtspURL);
 }
 
-MyRTSPClient::MyRTSPClient(UsageEnvironment & env, char const* rtspURL)
+MyRTSPClient::MyRTSPClient(UsageEnvironment& env, char const* rtspURL)
 	:RTSPClient(env, rtspURL, 1, NULL, 0, -1)
 {
 
@@ -350,11 +350,11 @@ StreamClientState::~StreamClientState() {
 // Define the size of the buffer that we'll use:
 #define DUMMY_SINK_RECEIVE_BUFFER_SIZE 1000000
 
-DummySink* DummySink::createNew(UsageEnvironment & env, MediaSubsession & subsession, MyRTSPClient & rtspClient) {
+DummySink* DummySink::createNew(UsageEnvironment& env, MediaSubsession& subsession, MyRTSPClient& rtspClient) {
 	return new DummySink(env, subsession, rtspClient);
 }
 
-DummySink::DummySink(UsageEnvironment & env, MediaSubsession & subsession, MyRTSPClient & rc)
+DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, MyRTSPClient& rc)
 	: MediaSink(env),
 	fSubsession(subsession), rtspClient(rc) {
 	find_first_iframe = false;
@@ -449,7 +449,7 @@ Boolean DummySink::continuePlaying() {
 	fSource->getNextFrame(fReceiveBuffer, DUMMY_SINK_RECEIVE_BUFFER_SIZE,
 		afterGettingFrame, this,
 		onSourceClosure, this);
-	return True;
+	return true;
 }
 
 

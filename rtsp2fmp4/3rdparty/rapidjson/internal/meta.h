@@ -21,8 +21,7 @@
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(effc++)
 #endif
-
-#if defined(_MSC_VER) && !defined(__clang__)
+#if defined(_MSC_VER)
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(6334)
 #endif
@@ -175,11 +174,7 @@ template <typename T> struct RemoveSfinaeTag<SfinaeTag&(*)(T)> { typedef T Type;
 RAPIDJSON_NAMESPACE_END
 //@endcond
 
-#if defined(_MSC_VER) && !defined(__clang__)
-RAPIDJSON_DIAG_POP
-#endif
-
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(_MSC_VER)
 RAPIDJSON_DIAG_POP
 #endif
 

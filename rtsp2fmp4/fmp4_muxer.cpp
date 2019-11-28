@@ -1,6 +1,43 @@
-
 #include "fmp4_muxer.h"
-#include <WinSock2.h>
+#include <cstring>
+// #include <stdlib.h> 
+#include <malloc.h>
+
+#define BigLittleSwap16(A)  ((((uint16_t)(A) & 0xff00) >> 8) | \
+	(((uint16_t)(A) & 0x00ff) << 8))
+
+#define BigLittleSwap32(A)  ((((uint32_t)(A) & 0xff000000) >> 24) | \
+	(((uint32_t)(A) & 0x00ff0000) >> 8) | \
+	(((uint32_t)(A) & 0x0000ff00) << 8) | \
+	(((uint32_t)(A) & 0x000000ff) << 24))
+
+#define BigLittleSwap64(A) (((uint64_t)BigLittleSwap32((uint32_t)(A >> 32))) | ((uint64_t)(BigLittleSwap32((uint32_t)(A & 0XFFFFFFFF))) << 32))
+
+int checkCPUendian()
+{
+	union {
+		unsigned long int i;
+		unsigned char s[4];
+	}c;
+	c.i = 0x12345678;
+	return (0x12 == c.s[0]);
+}
+
+uint16_t hton16(uint16_t h)
+{
+	return checkCPUendian() ? h : BigLittleSwap16(h);
+}
+
+uint32_t hton32(uint32_t h)
+{
+	return checkCPUendian() ? h : BigLittleSwap32(h);
+}
+
+uint64_t hton64(uint64_t h)
+{
+	return checkCPUendian() ? h : BigLittleSwap64(h);
+}
+
 //#pragma comment(lib,"ws2_32.lib")
 #pragma pack(push,1)
 
@@ -21,8 +58,8 @@ public:
 class AvcCBox : public BaseBox {
 public:
 	AvcCBox() {
-		BaseBox::boxsize = htonl(sizeof(AvcCBox));
-		BaseBox::boxtype = htonl(0X61766343);
+		BaseBox::boxsize = hton32(sizeof(AvcCBox));
+		BaseBox::boxtype = hton32(0X61766343);
 	};
 	uint8_t  configuration_version = 1;
 	uint8_t  avc_profile_indication = 0X4d;
@@ -30,12 +67,12 @@ public:
 	uint8_t  avc_level_indication = 0X2a;
 	uint8_t  nal_unit_length_size = 0Xff; //前面6位为reserved，后面2位有效。
 
-	uint8_t sps_pps[48] = {0};
-	
+	uint8_t sps_pps[48] = { 0 };
+
 	/*
 	//sps
 	uint8_t  num_sequence_parameter_sets = 0Xe1; //前面3位是reserved,后面5位有效。
-	uint16_t sequence_parameter_set_length = htons(0x0014);
+	uint16_t sequence_parameter_set_length = hton16(0x0014);
 	uint8_t  sequence_parameter_set[0x14] = {
 		0X67, 0X4d, 0X00, 0X2a,
 		0X95, 0Xa8, 0X1e, 0X00,
@@ -46,21 +83,21 @@ public:
 
 	//pps
 	uint8_t  num_picture_parameter_sets = 1;
-	uint16_t picture_parameter_set_length = htons(0x0004);
+	uint16_t picture_parameter_set_length = hton16(0x0004);
 	uint8_t  picture_parameter_set[4] = { 0X68, 0Xee, 0X3c, 0X80 };
 	*/
-	
+
 };
 
 // Level 7
 class Avc1Box : public BaseBox {
 public:
 	Avc1Box() {
-		BaseBox::boxsize = htonl(sizeof(Avc1Box));
-		BaseBox::boxtype = htonl(0X61766331);
+		BaseBox::boxsize = hton32(sizeof(Avc1Box));
+		BaseBox::boxtype = hton32(0X61766331);
 	};
 	uint8_t r0[6] = { 0 };
-	uint16_t data_reference_index = htons(0x0001);
+	uint16_t data_reference_index = hton16(0x0001);
 	uint16_t pre_defined0 = 0;
 	uint16_t r1 = 0;
 	uint32_t pre_defined1 = 0;
@@ -76,15 +113,15 @@ public:
 		0x00, 0x00, 0x00, 0x00
 	};
 	*/
-	uint16_t  width = htons(0X0780);
-	uint16_t  height = htons(0X0438);
-	uint32_t  horiz_resolution = htonl(0X00480000);
-	uint32_t  ver_resolution = htonl(0X00480000);
+	uint16_t  width = hton16(0X0780);
+	uint16_t  height = hton16(0X0438);
+	uint32_t  horiz_resolution = hton32(0X00480000);
+	uint32_t  ver_resolution = hton32(0X00480000);
 	uint32_t  r2 = 0;
-	uint16_t frames_count = htons(1);
+	uint16_t frames_count = hton16(1);
 	uint8_t compressr_name[32] = { 0 };
-	uint16_t bit_depth = htons(0x18);
-	uint16_t pre_defined4 = htons(0xFFFF);
+	uint16_t bit_depth = hton16(0x18);
+	uint16_t pre_defined4 = hton16(0xFFFF);
 	AvcCBox avcC;
 };
 
@@ -92,8 +129,8 @@ class UrlBox : public FullBaseBox
 {
 public:
 	UrlBox() {
-		FullBaseBox::boxsize = htonl(sizeof(UrlBox));
-		FullBaseBox::boxtype = htonl(0X75726C20);
+		FullBaseBox::boxsize = hton32(sizeof(UrlBox));
+		FullBaseBox::boxtype = hton32(0X75726C20);
 		FullBaseBox::flags[2] = 1;
 	}
 	//location
@@ -106,20 +143,20 @@ class DrefBox : public FullBaseBox
 {
 public:
 	DrefBox() {
-		FullBaseBox::boxsize = htonl(sizeof(DrefBox));
-		FullBaseBox::boxtype = htonl(0X64726566);
+		FullBaseBox::boxsize = hton32(sizeof(DrefBox));
+		FullBaseBox::boxtype = hton32(0X64726566);
 	};
-	uint32_t entry_count = htonl(1);
+	uint32_t entry_count = hton32(1);
 	UrlBox url;
 };
 
 class StsdBox : public FullBaseBox {
 public:
 	StsdBox() {
-		BaseBox::boxsize = htonl(sizeof(StsdBox));
-		FullBaseBox::boxtype = htonl(0X73747364);
+		BaseBox::boxsize = hton32(sizeof(StsdBox));
+		FullBaseBox::boxtype = hton32(0X73747364);
 	}
-	uint32_t  entry_count = htonl(1);
+	uint32_t  entry_count = hton32(1);
 	Avc1Box avc1;
 };
 
@@ -132,8 +169,8 @@ public:
 class SttsBox : public FullBaseBox {
 public:
 	SttsBox() {
-		FullBaseBox::boxsize = htonl(sizeof(SttsBox));
-		FullBaseBox::boxtype = htonl(0X73747473);
+		FullBaseBox::boxsize = hton32(sizeof(SttsBox));
+		FullBaseBox::boxtype = hton32(0X73747473);
 	}
 	uint32_t  entry_count = 0;
 };
@@ -146,8 +183,8 @@ public:
 class StssBox : public FullBaseBox {
 public:
 	StssBox() {
-		FullBaseBox::boxsize = htonl(sizeof(StssBox));
-		FullBaseBox::boxtype = htonl(0X73747373);
+		FullBaseBox::boxsize = hton32(sizeof(StssBox));
+		FullBaseBox::boxtype = hton32(0X73747373);
 	};
 	uint32_t  entry_count = 0;
 };
@@ -161,8 +198,8 @@ public:
 class CttsBox : public FullBaseBox {
 public:
 	CttsBox() {
-		FullBaseBox::boxsize = htonl(sizeof(CttsBox));
-		FullBaseBox::boxtype = htonl(0X63747473);
+		FullBaseBox::boxsize = hton32(sizeof(CttsBox));
+		FullBaseBox::boxtype = hton32(0X63747473);
 	};
 	uint32_t  entry_count = 0;
 };
@@ -171,14 +208,14 @@ class StscEntry {
 public:
 	uint32_t  first_chunk = 0;
 	uint32_t  samples_per_chunk = 0;
-	uint32_t  samples_description_index = htonl(1);
+	uint32_t  samples_description_index = hton32(1);
 };
 
 class StscBox : public FullBaseBox {
 public:
 	StscBox() {
-		FullBaseBox::boxsize = htonl(sizeof(StscBox));
-		FullBaseBox::boxtype = htonl(0X73747363);
+		FullBaseBox::boxsize = hton32(sizeof(StscBox));
+		FullBaseBox::boxtype = hton32(0X73747363);
 	};
 	uint32_t  entry_count = 0;
 };
@@ -191,8 +228,8 @@ public:
 class StszBox : public FullBaseBox {
 public:
 	StszBox() {
-		FullBaseBox::boxsize = htonl(sizeof(StszBox));
-		FullBaseBox::boxtype = htonl(0X7374737A);
+		FullBaseBox::boxsize = hton32(sizeof(StszBox));
+		FullBaseBox::boxtype = hton32(0X7374737A);
 	};
 	uint32_t  sample_size = 0;
 	uint32_t  sample_count = 0;
@@ -206,8 +243,8 @@ public:
 class StcoBox : public FullBaseBox {
 public:
 	StcoBox() {
-		FullBaseBox::boxsize = htonl(sizeof(StcoBox));
-		FullBaseBox::boxtype = htonl(0X7374636F);
+		FullBaseBox::boxsize = hton32(sizeof(StcoBox));
+		FullBaseBox::boxtype = hton32(0X7374636F);
 	};
 	uint32_t  entry_count = 0;
 };
@@ -217,8 +254,8 @@ class StblBox : public BaseBox {
 
 public:
 	StblBox() {
-		BaseBox::boxsize = htonl(sizeof(StblBox));
-		BaseBox::boxtype = htonl(0X7374626C);
+		BaseBox::boxsize = hton32(sizeof(StblBox));
+		BaseBox::boxtype = hton32(0X7374626C);
 	};
 	StsdBox stsd;
 	SttsBox stts;
@@ -233,8 +270,8 @@ class DinfBox :public BaseBox
 {
 public:
 	DinfBox() {
-		BaseBox::boxsize = htonl(sizeof(DinfBox));
-		BaseBox::boxtype = htonl(0X64696E66);
+		BaseBox::boxsize = hton32(sizeof(DinfBox));
+		BaseBox::boxtype = hton32(0X64696E66);
 	};
 	DrefBox dref;
 };
@@ -243,8 +280,8 @@ class VmhdBox : public FullBaseBox
 {
 public:
 	VmhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(VmhdBox));
-		FullBaseBox::boxtype = htonl(0X766D6864);
+		FullBaseBox::boxsize = hton32(sizeof(VmhdBox));
+		FullBaseBox::boxtype = hton32(0X766D6864);
 		FullBaseBox::flags[2] = 1;
 	};
 	uint32_t graphics_mode = 0;
@@ -257,8 +294,8 @@ class MinfBox :public BaseBox
 {
 public:
 	MinfBox() {
-		BaseBox::boxsize = htonl(sizeof(MinfBox));
-		BaseBox::boxtype = htonl(0X6D696E66);
+		BaseBox::boxsize = hton32(sizeof(MinfBox));
+		BaseBox::boxtype = hton32(0X6D696E66);
 	};
 	VmhdBox vmhd;
 	DinfBox dinf;
@@ -269,15 +306,15 @@ class ElstBox : public FullBaseBox
 {
 public:
 	ElstBox() {
-		FullBaseBox::boxsize = htonl(sizeof(ElstBox));
-		FullBaseBox::boxtype = htonl(0X656C7374);
+		FullBaseBox::boxsize = hton32(sizeof(ElstBox));
+		FullBaseBox::boxtype = hton32(0X656C7374);
 	};
 public:
-	uint32_t  entry_count = htonl(1);
+	uint32_t  entry_count = hton32(1);
 	//entry []
-	uint32_t segment_duration = htonl(0);
+	uint32_t segment_duration = hton32(0);
 	int32_t media_time = 0;
-	uint16_t media_rate_integer = htons(1);
+	uint16_t media_rate_integer = hton16(1);
 	uint16_t media_rate_fraction = 0;
 };
 
@@ -285,14 +322,14 @@ class MdhdBox : public FullBaseBox
 {
 public:
 	MdhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(MdhdBox));
-		FullBaseBox::boxtype = htonl(0X6D646864);
+		FullBaseBox::boxsize = hton32(sizeof(MdhdBox));
+		FullBaseBox::boxtype = hton32(0X6D646864);
 	};
 public:
 	uint32_t  creation_time = 0;
 	uint32_t  modification_time = 0;
-	uint32_t  time_scale = htonl(0X15F90);
-	uint32_t  duration = htonl(0);
+	uint32_t  time_scale = hton32(0X15F90);
+	uint32_t  duration = hton32(0);
 	uint8_t Language[4] = { 0x55, 0xc4, 0x00, 0x00 };
 
 };
@@ -300,12 +337,12 @@ class HdlrBox : public FullBaseBox
 {
 public:
 	HdlrBox() {
-		FullBaseBox::boxsize = htonl(sizeof(HdlrBox));
-		FullBaseBox::boxtype = htonl(0X68646C72);
-		strcpy_s(name, "VideoHandler");
+		FullBaseBox::boxsize = hton32(sizeof(HdlrBox));
+		FullBaseBox::boxtype = hton32(0X68646C72);
+		std::strcpy(name, "VideoHandler");
 	};
 	uint32_t pre_defined = 0;
-	uint32_t handler_type = htonl(0x76696465);
+	uint32_t handler_type = hton32(0x76696465);
 	uint32_t reserved[3] = { 0 };
 	char  name[13] = { 0 };
 };
@@ -315,8 +352,8 @@ class MdiaBox : public BaseBox
 {
 public:
 	MdiaBox() {
-		BaseBox::boxsize = htonl(sizeof(MdiaBox));
-		BaseBox::boxtype = htonl(0X6D646961);
+		BaseBox::boxsize = hton32(sizeof(MdiaBox));
+		BaseBox::boxtype = hton32(0X6D646961);
 	};
 	MdhdBox mdhd;
 	HdlrBox hdlr;
@@ -327,31 +364,31 @@ class TkhdBox : public FullBaseBox
 {
 public:
 	TkhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TkhdBox));
-		FullBaseBox::boxtype = htonl(0X746B6864);
+		FullBaseBox::boxsize = hton32(sizeof(TkhdBox));
+		FullBaseBox::boxtype = hton32(0X746B6864);
 		FullBaseBox::flags[2] = 3;
 	};
 	uint32_t  creation_time = 0;
 	uint32_t  modification_time = 0;
-	uint32_t  track_id = htonl(1);
+	uint32_t  track_id = hton32(1);
 	uint8_t  r0[4] = { 0 };
-	uint32_t  duration = htonl(0);
+	uint32_t  duration = hton32(0);
 	uint8_t  r1[8] = { 0 };
 	uint16_t  layer = 0;
 	uint16_t  alternate_group = 0;
 	uint16_t  volume = 0;
 	uint8_t  r2[2] = { 0 };
-	uint32_t matrix[9] = { htonl(0x00010000),0,0,0,htonl(0x00010000),0,0,0,htonl(0x40000000) };
-	uint32_t  width = htonl(0X07800000);
-	uint32_t  height = htonl(0X04380000);
+	uint32_t matrix[9] = { hton32(0x00010000),0,0,0,hton32(0x00010000),0,0,0,hton32(0x40000000) };
+	uint32_t  width = hton32(0X07800000);
+	uint32_t  height = hton32(0X04380000);
 };
 
 class EdtsBox : public BaseBox
 {
 public:
 	EdtsBox() {
-		BaseBox::boxsize = htonl(sizeof(EdtsBox));
-		BaseBox::boxtype = htonl(0X65647473);
+		BaseBox::boxsize = hton32(sizeof(EdtsBox));
+		BaseBox::boxtype = hton32(0X65647473);
 	};
 	ElstBox elst;
 };
@@ -360,11 +397,11 @@ class MehdBox : public FullBaseBox
 {
 public:
 	MehdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(MehdBox));
-		FullBaseBox::boxtype = htonl(0X6d656864);
+		FullBaseBox::boxsize = hton32(sizeof(MehdBox));
+		FullBaseBox::boxtype = hton32(0X6d656864);
 	};
 public:
-	uint32_t fragment_duration = htonl(0);
+	uint32_t fragment_duration = hton32(0);
 };
 
 typedef struct {
@@ -382,11 +419,11 @@ class TrexBox : public FullBaseBox
 {
 public:
 	TrexBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TrexBox));
-		FullBaseBox::boxtype = htonl(0X74726578);
+		FullBaseBox::boxsize = hton32(sizeof(TrexBox));
+		FullBaseBox::boxtype = hton32(0X74726578);
 	};
-	uint32_t  track_id = htonl(1);
-	uint32_t  sample_description_index = htonl(1);
+	uint32_t  track_id = hton32(1);
+	uint32_t  sample_description_index = hton32(1);
 	uint32_t  sample_duration = 0;
 	uint32_t  sample_size = 0;
 	uint32_t  sample_flags = 0;
@@ -397,42 +434,42 @@ class TfhdBox : public FullBaseBox
 {
 public:
 	TfhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TfhdBox));
-		FullBaseBox::boxtype = htonl(0X74666864);
+		FullBaseBox::boxsize = hton32(sizeof(TfhdBox));
+		FullBaseBox::boxtype = hton32(0X74666864);
 		FullBaseBox::flags[0] = 0x02;
 		FullBaseBox::flags[2] = 0x28;
 	};
-	uint32_t track_id = htonl(1);
-	//uint64_t base_data_offset = 0;// htonl(0X001D27B);
-	//uint32_t sample_description_index = htonl(1);
-	uint32_t default_sample_duration = htonl(0XE10);
+	uint32_t track_id = hton32(1);
+	//uint64_t base_data_offset = 0;// hton32(0X001D27B);
+	//uint32_t sample_description_index = hton32(1);
+	uint32_t default_sample_duration = hton32(0XE10);
 	//uint32_t default_sample_size = 0;
-	uint32_t default_sample_flags = htonl(0X01010000);
+	uint32_t default_sample_flags = hton32(0X01010000);
 };
 
 class TfdtBox : public FullBaseBox
 {
 public:
 	TfdtBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TfdtBox));
-		FullBaseBox::boxtype = htonl(0X74666474);
+		FullBaseBox::boxsize = hton32(sizeof(TfdtBox));
+		FullBaseBox::boxtype = hton32(0X74666474);
 		FullBaseBox::version = 0x01;
 	};
 	// if version= 0 , decode time use uint32_t type.
-	uint64_t base_media_decode_time = htonll(0);
+	uint64_t base_media_decode_time = hton64(0);
 };
 
 
 class TrunSample {
 public:
 	TrunSample() {
-		//sample_duration = htonl(0x8E10);
+		//sample_duration = hton32(0x8E10);
 	};
 public:
 	//uint32_t sample_duration = 0;
 	uint32_t sample_size = 0;
-	uint32_t sample_flags = htonl(0X01010000);
-	//uint32_t composition_time_offset = htonl(0x0400);
+	uint32_t sample_flags = hton32(0X01010000);
+	//uint32_t composition_time_offset = hton32(0x0400);
 };
 
 
@@ -440,16 +477,16 @@ class TrunBox : public FullBaseBox
 {
 public:
 	TrunBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TrunBox));
-		FullBaseBox::boxtype = htonl(0X7472756E);
+		FullBaseBox::boxsize = hton32(sizeof(TrunBox));
+		FullBaseBox::boxtype = hton32(0X7472756E);
 		FullBaseBox::flags[1] = 0X06;// 0X02;
 		FullBaseBox::flags[2] = 0X01;// 0X05;
-		//ts[0].duration = htonl(0XE10);
+		//ts[0].duration = hton32(0XE10);
 	};
-	uint32_t sample_count = htonl(1);
+	uint32_t sample_count = hton32(1);
 	// all fields in the following array are optional
-	int32_t data_offset = htonl(0);
-	//uint32_t first_sample_flags = htonl(0X01010000);
+	int32_t data_offset = hton32(0);
+	//uint32_t first_sample_flags = hton32(0X01010000);
 	TrunSample ts[1];
 };
 
@@ -459,8 +496,8 @@ class TrafBox :public BaseBox
 {
 public:
 	TrafBox() {
-		BaseBox::boxsize = htonl(sizeof(TrafBox));
-		BaseBox::boxtype = htonl(0X74726166);
+		BaseBox::boxsize = hton32(sizeof(TrafBox));
+		BaseBox::boxtype = hton32(0X74726166);
 	};
 	TfhdBox tfhd;
 	TfdtBox tfdt;
@@ -472,26 +509,26 @@ class MvhdBox : public FullBaseBox
 {
 public:
 	MvhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(MvhdBox));
-		FullBaseBox::boxtype = htonl(0X6D766864);
+		FullBaseBox::boxsize = hton32(sizeof(MvhdBox));
+		FullBaseBox::boxtype = hton32(0X6D766864);
 	};
 	uint32_t  creation_time = 0;
 	uint32_t  modification_time = 0;
-	uint32_t  time_scale = htonl(0X00003E8);
-	uint32_t  duration = htonl(0);
-	uint32_t  rate = htonl(0X10000);
-	uint16_t  volume = htons(0X100);
+	uint32_t  time_scale = hton32(0X00003E8);
+	uint32_t  duration = hton32(0);
+	uint32_t  rate = hton32(0X10000);
+	uint16_t  volume = hton16(0X100);
 	uint8_t r0[10] = { 0 };
-	uint32_t matrix[9] = { htonl(0x00010000),0,0,0,htonl(0x00010000),0,0,0,htonl(0x40000000) };
+	uint32_t matrix[9] = { hton32(0x00010000),0,0,0,hton32(0x00010000),0,0,0,hton32(0x40000000) };
 	uint32_t pre_defined[6] = { 0,0,0,0,0,0 };
-	uint32_t next_track_id = htonl(0X02);
+	uint32_t next_track_id = hton32(0X02);
 };
 class TrakBox : public BaseBox
 {
 public:
 	TrakBox() {
-		BaseBox::boxsize = htonl(sizeof(TrakBox));
-		BaseBox::boxtype = htonl(0X7472616B);
+		BaseBox::boxsize = hton32(sizeof(TrakBox));
+		BaseBox::boxtype = hton32(0X7472616B);
 	};
 	TkhdBox tkhd;
 	//EdtsBox edts;
@@ -502,8 +539,8 @@ class MvexBox : public BaseBox
 {
 public:
 	MvexBox() {
-		BaseBox::boxsize = htonl(sizeof(MvexBox));
-		BaseBox::boxtype = htonl(0X6D766578);
+		BaseBox::boxsize = hton32(sizeof(MvexBox));
+		BaseBox::boxtype = hton32(0X6D766578);
 	};
 	MehdBox mehd;
 	TrexBox trex;
@@ -530,18 +567,18 @@ class MfhdBox : public FullBaseBox
 {
 public:
 	MfhdBox() {
-		FullBaseBox::boxsize = htonl(sizeof(MfhdBox));
-		FullBaseBox::boxtype = htonl(0X6D666864);
+		FullBaseBox::boxsize = hton32(sizeof(MfhdBox));
+		FullBaseBox::boxtype = hton32(0X6D666864);
 	};
-	uint32_t  sequence_number = htonl(1);
+	uint32_t  sequence_number = hton32(1);
 };
 
 class TfraBox : public FullBaseBox
 {
 public:
 	TfraBox() {
-		FullBaseBox::boxsize = htonl(sizeof(TfraBox));
-		FullBaseBox::boxtype = htonl(0X74667261);
+		FullBaseBox::boxsize = hton32(sizeof(TfraBox));
+		FullBaseBox::boxtype = hton32(0X74667261);
 	};
 	uint32_t r0[3] = { 0 };
 };
@@ -550,8 +587,8 @@ class MfroBox : public FullBaseBox
 {
 public:
 	MfroBox() {
-		FullBaseBox::boxsize = htonl(sizeof(MfroBox));
-		FullBaseBox::boxtype = htonl(0X6D66726F);
+		FullBaseBox::boxsize = hton32(sizeof(MfroBox));
+		FullBaseBox::boxtype = hton32(0X6D66726F);
 	};
 	uint32_t size = 0;
 };
@@ -561,19 +598,19 @@ class FtypBox : public BaseBox
 {
 public:
 	FtypBox() {
-		BaseBox::boxsize = htonl(0X00000024);
-		BaseBox::boxtype = htonl(0X66747970);
+		BaseBox::boxsize = hton32(0X00000024);
+		BaseBox::boxtype = hton32(0X66747970);
 	};
-	uint32_t  major_brand = htonl(0X69736F6D);
-	uint32_t  minor_version = htonl(0X00000200);
-	ULONG32 compatible_brands[5] = { htonl(0X69736F6D), htonl(0X69736F32), htonl(0X61766331), htonl(0X69736F36), htonl(0X6D703431) };//"isomiso2avc1iso6mp41";
+	uint32_t  major_brand = hton32(0X69736F6D);
+	uint32_t  minor_version = hton32(0X00000200);
+	uint32_t compatible_brands[5] = { hton32(0X69736F6D), hton32(0X69736F32), hton32(0X61766331), hton32(0X69736F36), hton32(0X6D703431) };//"isomiso2avc1iso6mp41";
 };
 
 class MoovBox : public BaseBox {
 public:
 	MoovBox() {
-		BaseBox::boxsize = htonl(sizeof(MoovBox));
-		BaseBox::boxtype = htonl(0X6D6F6F76);
+		BaseBox::boxsize = hton32(sizeof(MoovBox));
+		BaseBox::boxtype = hton32(0X6D6F6F76);
 		memcpy(udta, UDTA, 217);
 	};
 	MvhdBox mvhd;
@@ -585,8 +622,8 @@ public:
 class MoofBox : public BaseBox {
 public:
 	MoofBox() {
-		BaseBox::boxsize = htonl(sizeof(MoofBox));
-		BaseBox::boxtype = htonl(0X6D6F6F66);
+		BaseBox::boxsize = hton32(sizeof(MoofBox));
+		BaseBox::boxtype = hton32(0X6D6F6F66);
 	};
 	MfhdBox mfhd;
 	TrafBox traf;
@@ -596,8 +633,8 @@ class MdatBox : public BaseBox
 {
 public:
 	MdatBox() {
-		BaseBox::boxsize = htonl(sizeof(MdatBox));
-		BaseBox::boxtype = htonl(0X6D646174);
+		BaseBox::boxsize = hton32(sizeof(MdatBox));
+		BaseBox::boxtype = hton32(0X6D646174);
 	};
 
 };
@@ -606,8 +643,8 @@ class MfraBox : public BaseBox
 {
 public:
 	MfraBox() {
-		BaseBox::boxsize = htonl(sizeof(MfraBox));
-		BaseBox::boxtype = htonl(0X6D667261);
+		BaseBox::boxsize = hton32(sizeof(MfraBox));
+		BaseBox::boxtype = hton32(0X6D667261);
 	};
 	TfraBox tfra;
 	MfroBox mfro;
@@ -617,12 +654,12 @@ class StypBox : public BaseBox
 {
 public:
 	StypBox() {
-		BaseBox::boxsize = htonl(0X00000024);
-		BaseBox::boxtype = htonl(0X73747970);
+		BaseBox::boxsize = hton32(0X00000024);
+		BaseBox::boxtype = hton32(0X73747970);
 	};
-	uint32_t  major_brand = htonl(0X69736F6D);
-	uint32_t  minor_version = htonl(0X00000200);
-	ULONG32 compatible_brands[5] = { htonl(0X69736F6D), htonl(0X69736F32), htonl(0X61766331), htonl(0X69736F36), htonl(0X6D703432) };//"isomiso2avc1iso6mp42";
+	uint32_t  major_brand = hton32(0X69736F6D);
+	uint32_t  minor_version = hton32(0X00000200);
+	uint32_t compatible_brands[5] = { hton32(0X69736F6D), hton32(0X69736F32), hton32(0X61766331), hton32(0X69736F36), hton32(0X6D703432) };//"isomiso2avc1iso6mp42";
 };
 
 
@@ -656,22 +693,22 @@ bool get_h264_data(uint32_t * buf, uint32_t  in_len, uint32_t * out_buf, uint32_
 }
 */
 
-uint32_t FMp4Muxer::generate_ftyp_moov(uint8_t* &fmp4_header, FMp4Info fi)
+uint32_t FMp4Muxer::generate_ftyp_moov(uint8_t*& fmp4_header, FMp4Info fi)
 {
 	FtypBox ftyp;
-	
+
 	MoovBox moov;
-	
+
 	//sps & pps
-	
+
 	uint8_t* t = moov.trak.mdia.minf.stbl.stsd.avc1.avcC.sps_pps;
-	
+
 	uint8_t  num_sequence_parameter_sets = 0Xe1;
-	uint16_t sequence_parameter_set_length = htons(fi.sps_size);
-	
+	uint16_t sequence_parameter_set_length = hton16(fi.sps_size);
+
 	uint8_t  num_picture_parameter_sets = 1;
-	uint16_t picture_parameter_set_length = htons(fi.pps_size);
-	
+	uint16_t picture_parameter_set_length = hton16(fi.pps_size);
+
 	*t = num_sequence_parameter_sets;
 	t += sizeof(num_sequence_parameter_sets);
 	memcpy(t, &sequence_parameter_set_length, sizeof(sequence_parameter_set_length));
@@ -684,11 +721,11 @@ uint32_t FMp4Muxer::generate_ftyp_moov(uint8_t* &fmp4_header, FMp4Info fi)
 	memcpy(t, &picture_parameter_set_length, sizeof(picture_parameter_set_length));
 	t += sizeof(picture_parameter_set_length);
 	memcpy(t, fi.pps, fi.pps_size);
-	t += fi.pps_size;
-	
+	//t += fi.pps_size;
+
 	//
 
-	fmp4_header = (uint8_t *)malloc(sizeof(ftyp) + sizeof(moov));
+	fmp4_header = (uint8_t*)malloc(sizeof(ftyp) + sizeof(moov));
 	memcpy(fmp4_header, &ftyp, sizeof(ftyp));
 	memcpy(fmp4_header + sizeof(ftyp), &moov, sizeof(moov));
 
@@ -702,50 +739,50 @@ uint32_t FMp4Muxer::generate_ftyp_moov(uint8_t* &fmp4_header, FMp4Info fi)
 	//MfraBox mfra;
 	//fwrite(&mfra, sizeof(MfraBox), 1, fp);
 
-	
+
 }
 
 
 
-uint32_t FMp4Muxer::generate_moof_mdat(uint8_t* &frame, uint32_t frameSize)
+uint32_t FMp4Muxer::generate_moof_mdat(uint8_t*& frame, uint32_t frameSize)
 {
 	MoofBox moof;
 
 	if (frame[0] == 0x65)
 	{
-		moof.traf.trun.ts[0].sample_flags = htonl(0X02000000);
+		moof.traf.trun.ts[0].sample_flags = hton32(0X02000000);
 	}
 
-	moof.traf.trun.ts[0].sample_size = htonl(frameSize + 4);
-	//moof.traf.trun.ts[0].composition_time_offset = htons(1024);
+	moof.traf.trun.ts[0].sample_size = hton32(frameSize + 4);
+	//moof.traf.trun.ts[0].composition_time_offset = hton16(1024);
 	//LONGLONG p = _ftelli64(fp);
-	//moof.traf.tfhd.base_data_offset = htonll(p);
-	// moof.traf.tfhd.default_sample_size = htonl(frameSize + 4);
-	moof.traf.trun.data_offset = htonl(sizeof(moof) + sizeof(MdatBox));
-	//moof.traf.trun.data_offset = htonl(sizeof(moof));
-	moof.traf.tfdt.base_media_decode_time = htonll((uint64_t)(0XE10 * frame_number));
+	//moof.traf.tfhd.base_data_offset = hton64(p);
+	// moof.traf.tfhd.default_sample_size = hton32(frameSize + 4);
+	moof.traf.trun.data_offset = hton32(sizeof(moof) + sizeof(MdatBox));
+	//moof.traf.trun.data_offset = hton32(sizeof(moof));
+	moof.traf.tfdt.base_media_decode_time = hton64((uint64_t)((uint64_t)0x0E10 * frame_number));
 
 	frame_number++;
-	moof.mfhd.sequence_number = htonl(frame_number);
+	moof.mfhd.sequence_number = hton32(frame_number);
 	//fwrite(&moof, sizeof(moof), 1, fp);
 
 
 	MdatBox mdat;
-	mdat.boxsize = htonl(sizeof(mdat) + frameSize + 4);
+	mdat.boxsize = hton32(sizeof(mdat) + frameSize + 4);
 	//fwrite(&mdat, sizeof(mdat), 1, fp);
 
-	int fs = htonl(frameSize);
+	uint32_t fs = hton32(frameSize);
 	//fwrite(&fs, 4, 1, fp);
 
 	//fwrite(frame, frameSize, 1, fp);
 
 	//fflush(fp);
-
-	uint8_t * buf = (uint8_t *)malloc(sizeof(moof) + sizeof(mdat) + frameSize + 4);
+	size_t bufSize = sizeof(moof) + sizeof(mdat) + sizeof(uint32_t) + frameSize;
+	uint8_t* buf = (uint8_t*)malloc(bufSize);
 	memcpy(buf, &moof, sizeof(moof));
 	memcpy(buf + sizeof(moof), &mdat, sizeof(mdat));
-	memcpy(buf + sizeof(moof) + sizeof(mdat), &fs, 4);
-	memcpy(buf + sizeof(moof) + sizeof(mdat) + 4, frame, frameSize);
+	memcpy(buf + sizeof(moof) + sizeof(mdat), &fs, sizeof(uint32_t));
+	memcpy(buf + sizeof(moof) + sizeof(mdat) + sizeof(uint32_t), frame, frameSize);
 
 	//fmp4_server_batch_send(buf, sizeof(moof) + sizeof(mdat) + frameSize + 4);
 

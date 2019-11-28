@@ -21,7 +21,9 @@
 #ifdef __clang__
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(switch-enum)
-#elif defined(_MSC_VER)
+#endif
+
+#ifdef _MSC_VER
 RAPIDJSON_DIAG_PUSH
 RAPIDJSON_DIAG_OFF(4512) // assignment operator could not be generated
 #endif
@@ -163,12 +165,7 @@ public:
     GenericPointer(const Token* tokens, size_t tokenCount) : allocator_(), ownAllocator_(), nameBuffer_(), tokens_(const_cast<Token*>(tokens)), tokenCount_(tokenCount), parseErrorOffset_(), parseErrorCode_(kPointerParseErrorNone) {}
 
     //! Copy constructor.
-    GenericPointer(const GenericPointer& rhs) : allocator_(rhs.allocator_), ownAllocator_(), nameBuffer_(), tokens_(), tokenCount_(), parseErrorOffset_(), parseErrorCode_(kPointerParseErrorNone) {
-        *this = rhs;
-    }
-
-    //! Copy constructor.
-    GenericPointer(const GenericPointer& rhs, Allocator* allocator) : allocator_(allocator), ownAllocator_(), nameBuffer_(), tokens_(), tokenCount_(), parseErrorOffset_(), parseErrorCode_(kPointerParseErrorNone) {
+    GenericPointer(const GenericPointer& rhs, Allocator* allocator = 0) : allocator_(allocator), ownAllocator_(), nameBuffer_(), tokens_(), tokenCount_(), parseErrorOffset_(), parseErrorCode_(kPointerParseErrorNone) {
         *this = rhs;
     }
 
@@ -199,36 +196,6 @@ public:
         }
         return *this;
     }
-
-    //! Swap the content of this pointer with an other.
-    /*!
-        \param other The pointer to swap with.
-        \note Constant complexity.
-    */
-    GenericPointer& Swap(GenericPointer& other) RAPIDJSON_NOEXCEPT {
-        internal::Swap(allocator_, other.allocator_);
-        internal::Swap(ownAllocator_, other.ownAllocator_);
-        internal::Swap(nameBuffer_, other.nameBuffer_);
-        internal::Swap(tokens_, other.tokens_);
-        internal::Swap(tokenCount_, other.tokenCount_);
-        internal::Swap(parseErrorOffset_, other.parseErrorOffset_);
-        internal::Swap(parseErrorCode_, other.parseErrorCode_);
-        return *this;
-    }
-
-    //! free-standing swap function helper
-    /*!
-        Helper function to enable support for common swap implementation pattern based on \c std::swap:
-        \code
-        void swap(MyClass& a, MyClass& b) {
-            using std::swap;
-            swap(a.pointer, b.pointer);
-            // ...
-        }
-        \endcode
-        \see Swap()
-     */
-    friend inline void swap(GenericPointer& a, GenericPointer& b) RAPIDJSON_NOEXCEPT { a.Swap(b); }
 
     //@}
 
@@ -273,7 +240,7 @@ public:
     template <typename T>
     RAPIDJSON_DISABLEIF_RETURN((internal::NotExpr<internal::IsSame<typename internal::RemoveConst<T>::Type, Ch> >), (GenericPointer))
     Append(T* name, Allocator* allocator = 0) const {
-        return Append(name, internal::StrLen(name), allocator);
+        return Append(name, StrLen(name), allocator);
     }
 
 #if RAPIDJSON_HAS_STDSTRING
@@ -307,7 +274,7 @@ public:
         else {
             Ch name[21];
             for (size_t i = 0; i <= length; i++)
-                name[i] = static_cast<Ch>(buffer[i]);
+                name[i] = buffer[i];
             Token token = { name, length, index };
             return Append(token, allocator);
         }
@@ -385,33 +352,6 @@ public:
         \note When any pointers are invalid, always returns true.
     */
     bool operator!=(const GenericPointer& rhs) const { return !(*this == rhs); }
-
-    //! Less than operator.
-    /*!
-        \note Invalid pointers are always greater than valid ones.
-    */
-    bool operator<(const GenericPointer& rhs) const {
-        if (!IsValid())
-            return false;
-        if (!rhs.IsValid())
-            return true;
-
-        if (tokenCount_ != rhs.tokenCount_)
-            return tokenCount_ < rhs.tokenCount_;
-
-        for (size_t i = 0; i < tokenCount_; i++) {
-            if (tokens_[i].index != rhs.tokens_[i].index)
-                return tokens_[i].index < rhs.tokens_[i].index;
-
-            if (tokens_[i].length != rhs.tokens_[i].length)
-                return tokens_[i].length < rhs.tokens_[i].length;
-
-            if (int cmp = std::memcmp(tokens_[i].name, rhs.tokens_[i].name, sizeof(Ch) * tokens_[i].length))
-                return cmp < 0;
-        }
-
-        return false;
-    }
 
     //@}
 
@@ -592,14 +532,14 @@ public:
     */
     ValueType& GetWithDefault(ValueType& root, const ValueType& defaultValue, typename ValueType::AllocatorType& allocator) const {
         bool alreadyExist;
-        ValueType& v = Create(root, allocator, &alreadyExist);
+        Value& v = Create(root, allocator, &alreadyExist);
         return alreadyExist ? v : v.CopyFrom(defaultValue, allocator);
     }
 
     //! Query a value in a subtree with default null-terminated string.
     ValueType& GetWithDefault(ValueType& root, const Ch* defaultValue, typename ValueType::AllocatorType& allocator) const {
         bool alreadyExist;
-        ValueType& v = Create(root, allocator, &alreadyExist);
+        Value& v = Create(root, allocator, &alreadyExist);
         return alreadyExist ? v : v.SetString(defaultValue, allocator);
     }
 
@@ -607,7 +547,7 @@ public:
     //! Query a value in a subtree with default std::basic_string.
     ValueType& GetWithDefault(ValueType& root, const std::basic_string<Ch>& defaultValue, typename ValueType::AllocatorType& allocator) const {
         bool alreadyExist;
-        ValueType& v = Create(root, allocator, &alreadyExist);
+        Value& v = Create(root, allocator, &alreadyExist);
         return alreadyExist ? v : v.SetString(defaultValue, allocator);
     }
 #endif
@@ -818,7 +758,7 @@ private:
     */
     Ch* CopyFromRaw(const GenericPointer& rhs, size_t extraToken = 0, size_t extraNameBufferSize = 0) {
         if (!allocator_) // allocator is independently owned.
-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
 
         size_t nameBufferSize = rhs.tokenCount_; // null terminators for tokens
         for (Token *t = rhs.tokens_; t != rhs.tokens_ + rhs.tokenCount_; ++t)
@@ -866,7 +806,7 @@ private:
 
         // Create own allocator if user did not supply.
         if (!allocator_)
-            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator)();
+            ownAllocator_ = allocator_ = RAPIDJSON_NEW(Allocator());
 
         // Count number of '/' as tokenCount
         tokenCount_ = 0;
@@ -1089,8 +1029,8 @@ private:
             unsigned char u = static_cast<unsigned char>(c);
             static const char hexDigits[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
             os_.Put('%');
-            os_.Put(static_cast<typename OutputStream::Ch>(hexDigits[u >> 4]));
-            os_.Put(static_cast<typename OutputStream::Ch>(hexDigits[u & 15]));
+            os_.Put(hexDigits[u >> 4]);
+            os_.Put(hexDigits[u & 15]);
         }
     private:
         OutputStream& os_;
@@ -1407,7 +1347,11 @@ bool EraseValueByPointer(T& root, const CharType(&source)[N]) {
 
 RAPIDJSON_NAMESPACE_END
 
-#if defined(__clang__) || defined(_MSC_VER)
+#ifdef __clang__
+RAPIDJSON_DIAG_POP
+#endif
+
+#ifdef _MSC_VER
 RAPIDJSON_DIAG_POP
 #endif
 

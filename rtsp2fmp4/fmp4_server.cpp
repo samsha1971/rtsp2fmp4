@@ -7,14 +7,49 @@
 #include "rapidjson/stringbuffer.h"
 #include <string>
 #include <locale>
-#include <codecvt>
 #include <fstream>
-#include  <direct.h> 
+
+
+#ifdef WIN32
+#include <direct.h> 
+#else
+#include <unistd.h>
+#endif
 
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
 using namespace websocketpp::http::parser;
+
+
+#include <cstdlib>
+#include <string>
+
+std::wstring s2ws(const std::string& str) {
+	if (str.empty()) {
+		return L"";
+	}
+	unsigned len = str.size() + 1;
+	setlocale(LC_CTYPE, "zh_CN.UTF-8");
+	wchar_t* p = new wchar_t[len];
+	mbstowcs(p, str.c_str(), len);
+	std::wstring w_str(p);
+	delete[] p;
+	return w_str;
+}
+
+std::string ws2s(const std::wstring& w_str) {
+	if (w_str.empty()) {
+		return "";
+	}
+	unsigned len = w_str.size() * 4 + 1;
+	setlocale(LC_CTYPE, "zh_CN.UTF-8");
+	char* p = new char[len];
+	wcstombs(p, w_str.c_str(), len);
+	std::string str(p);
+	delete[] p;
+	return str;
+}
 
 class chs_codecvt : public std::codecvt_byname<wchar_t, char, std::mbstate_t> {
 public:
@@ -22,25 +57,30 @@ public:
 };
 
 std::string getConfig() {
-	
+
 	char db[255];
-	char * t = _getcwd(db, 255);
-	std::string path = db;
+	std::string path = "";
+#ifdef WIN32
+	char* t = _getcwd(db, 255);
+	path = db;
 	path += "\\config.json";
+#else
+	char* t = getcwd(db, 255);
+	path = db;
+	path += "/config.json";
+#endif
 
 	std::wifstream f(path.data(), std::ifstream::in);
-	std::codecvt_utf8<wchar_t>* cu = new std::codecvt_utf8<wchar_t>();
-	std::locale cl = std::locale(std::locale("chs"), cu);
-	f.imbue(cl);
+	f.imbue(std::locale("zh_CN.UTF-8"));
 	std::wstring ws;
-	wchar_t c;
-	while (f.get(c))
+	while (!f.eof())
 	{
+		wchar_t c;
+		f.get(c);
 		ws += c;
 	}
-	std::wstring_convert<chs_codecvt> conv(new chs_codecvt());
-	std::string s = conv.to_bytes(ws);
-
+	f.close();
+	std::string s = ws2s(ws);
 	return s;
 }
 
@@ -90,7 +130,7 @@ void FMp4Server::on_open(connection_hdl hdl) {
 	request req = m_server.get_con_from_hdl(hdl)->get_request();
 	std::string uri = req.get_uri();
 	std::string url = proxy.at(uri);
-	boolean found = false;
+	bool found = false;
 	for (auto rc : m_rcs) {
 		if (url == rc->url()) {
 			found = true;
@@ -142,7 +182,7 @@ void FMp4Server::on_message(connection_hdl hdl, server::message_ptr msg) {
 	*/
 }
 
-void FMp4Server::send(connection_hdl hdl, uint8_t * buf, int buf_size)
+void FMp4Server::send(connection_hdl hdl, uint8_t* buf, int buf_size)
 {
 	try
 	{

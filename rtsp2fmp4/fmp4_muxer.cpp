@@ -1,6 +1,5 @@
 #include "fmp4_muxer.h"
 #include <cstring>
-// #include <stdlib.h> 
 #include <malloc.h>
 
 #define BigLittleSwap16(A)  ((((uint16_t)(A) & 0xff00) >> 8) | \

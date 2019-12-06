@@ -25,6 +25,7 @@ public:
 	void run_async();
 	void stop();
 	void send(connection_hdl hdl, uint8_t* buf, int buf_size);
+	void send_async(connection_hdl hdl, uint8_t* buf, int buf_size);
 protected:
 	void on_open(connection_hdl hdl);
 	void on_close(connection_hdl hdl);

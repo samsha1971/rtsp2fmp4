@@ -9,6 +9,7 @@
 #include <locale>
 #include <fstream>
 
+#include <boost/thread/thread.hpp>
 
 #ifdef WIN32
 #include <direct.h> 
@@ -50,11 +51,6 @@ std::string ws2s(const std::wstring& w_str) {
 	delete[] p;
 	return str;
 }
-
-class chs_codecvt : public std::codecvt_byname<wchar_t, char, std::mbstate_t> {
-public:
-	chs_codecvt() : codecvt_byname("chs") { }
-};
 
 std::string getConfig() {
 
@@ -127,48 +123,70 @@ void FMp4Server::stop() {
 }
 
 void FMp4Server::on_open(connection_hdl hdl) {
-	request req = m_server.get_con_from_hdl(hdl)->get_request();
-	std::string uri = req.get_uri();
-	std::string url = proxy.at(uri);
-	bool found = false;
-	for (auto rc : m_rcs) {
-		if (url == rc->url()) {
-			found = true;
-			rc->fmp4Server = this;
-			FMp4Muxer muxer;
-			rc->conns.insert(std::pair<connection_hdl, FMp4Muxer>(hdl, muxer));
+	try
+	{
+		request req = m_server.get_con_from_hdl(hdl)->get_request();
+		std::string uri = req.get_uri();
+		std::string url = proxy.at(uri);
+		bool found = false;
+		for (auto rc : m_rcs) {
+			if (url == rc->url()) {
+				found = true;
+				rc->fmp4Server = this;
+				FMp4Muxer muxer;
+				boost::unique_lock<boost::shared_mutex> l(rc->mu);
+				rc->conns.insert(std::pair<connection_hdl, FMp4Muxer>(hdl, muxer));
+			}
+		}
+		if (!found) {
+			MyRTSPClient* rc = MyRTSPClient::createNew(*env, url.data());
+			if (rc) {
+				rc->fmp4Server = this;
+				FMp4Muxer muxer;
+				boost::unique_lock<boost::shared_mutex> l(rc->mu);
+				rc->conns.insert(std::pair<connection_hdl, FMp4Muxer>(hdl, muxer));
+				m_rcs.insert(rc);
+				rc->connect();
+			}
 		}
 	}
-	if (!found) {
-		MyRTSPClient* rc = MyRTSPClient::createNew(*env, url.data());
-		if (rc) {
-			rc->connect();
-			rc->fmp4Server = this;
-			FMp4Muxer muxer;
-			rc->conns.insert(std::pair<connection_hdl, FMp4Muxer>(hdl, muxer));
-			m_rcs.insert(rc);
-		}
+	catch (std::exception & e)
+	{
+		std::cout << e.what() << std::endl;
 	}
 	//m_server.send(hdl, fmp4_header, fmp4_header_size, websocketpp::frame::opcode::BINARY);
-
 }
 
 void FMp4Server::on_close(connection_hdl hdl) {
 
-	for (auto rc : m_rcs) {
-		if (rc->conns.find(hdl) != rc->conns.end()) {
-			rc->conns.erase(hdl);
-		}
-	}
-	//std::set <MyRTSPClient*>::iterator it;
-	for (std::set <MyRTSPClient*>::iterator it = m_rcs.begin(); it != m_rcs.end();)
+	try
 	{
-		if ((*it)->conns.size() == 0)
-			m_rcs.erase(it++);
-		else
-			it++;
-	}
+		for (auto rc : m_rcs) {
+			boost::unique_lock<boost::shared_mutex> l(rc->mu);
+			if (rc->conns.find(hdl) != rc->conns.end()) {
 
+				rc->conns.erase(hdl);
+			}
+		}
+
+		for (std::set <MyRTSPClient*>::iterator it = m_rcs.begin(); it != m_rcs.end();)
+		{
+			if ((*it)->conns.size() == 0)
+			{
+				MyRTSPClient* rc = (MyRTSPClient*)(*it);
+				boost::unique_lock<boost::shared_mutex> l(rc->mu);
+				m_rcs.erase(it++);
+				shutdownStream(rc);
+			}
+			else
+				it++;
+		}
+
+	}
+	catch (std::exception & e)
+	{
+		std::cout << e.what() << std::endl;
+	}
 }
 
 void FMp4Server::on_message(connection_hdl hdl, server::message_ptr msg) {
@@ -193,6 +211,26 @@ void FMp4Server::send(connection_hdl hdl, uint8_t* buf, int buf_size)
 		std::cout << e.what() << std::endl;
 	}
 
+}
+
+void send_async_threadfunc(server* server, connection_hdl hdl, uint8_t* buf, int buf_size)
+{
+	try
+	{
+		server->send(hdl, buf, buf_size, websocketpp::frame::opcode::BINARY);
+		free(buf);
+	}
+	catch (std::exception & e)
+	{
+		std::cout << e.what() << std::endl;
+	}
+}
+void FMp4Server::send_async(connection_hdl hdl, uint8_t* buf, int buf_size)
+{
+	uint8_t* buf2 = (uint8_t*)malloc(buf_size);
+	memcpy(buf2, buf, buf_size);
+	boost::thread thrd(boost::bind(&send_async_threadfunc, &m_server, hdl, buf2, buf_size));
+	thrd.join();
 }
 
 

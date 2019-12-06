@@ -4,6 +4,8 @@
 
 #include <time.h>
 #include <map>
+#include <boost/thread/locks.hpp>    
+#include <boost/thread/shared_mutex.hpp>
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
@@ -11,6 +13,8 @@
 #include <BasicUsageEnvironment.hh>
 
 #include "fmp4_muxer.h"
+
+
 
 using websocketpp::connection_hdl;
 
@@ -21,9 +25,8 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 void continueAfterPLAY(RTSPClient* rtspClient, int resultCode, char* resultString);
 void subsessionAfterPlaying(void* clientData);
 void subsessionByeHandler(void* clientData);
-void streamTimerHandler(void* clientData);
 void setupNextSubsession(RTSPClient* rtspClient);
-void shutdownStream(RTSPClient* rtspClient, int exitCode = 1);
+void shutdownStream(RTSPClient* rtspClient);
 
 class FMp4Server;
 
@@ -46,14 +49,13 @@ public:
 
 protected:
 	MyRTSPClient(UsageEnvironment& env, char const* rtspURL);
-	virtual ~MyRTSPClient();
-
 public:
+	virtual ~MyRTSPClient();
 	void connect();
 	StreamClientState scs;
 	std::map<connection_hdl, FMp4Muxer, std::owner_less<connection_hdl>> conns;
-	static unsigned rtspClientCount;
-	FMp4Server* fmp4Server;
+	FMp4Server* fmp4Server = NULL;
+	boost::shared_mutex mu;
 };
 
 

@@ -25,7 +25,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	set(BOOST_ROOT /usr/local/boost)
 endif()
 
-find_package(Boost 1.69.0 COMPONENTS system program_options date_time regex)
+find_package(Boost 1.69.0 COMPONENTS system program_options date_time regex thread)
 if(Boost_FOUND)
 	message("FOUND: ${Boost_INCLUDE_DIRS} | ${Boost_LIBRARIES}")
 else()

@@ -2,9 +2,9 @@
 
 ### Description
 
-Rtsp2fmp4 is a proxy server written in C++, whose main function is to access the RTSP server of the camera through live555, package H264 as FMP4 in real time, and send it to the requesting client. The client supports the live broadcast of delayed HTML5 in milliseconds through WebSocket+MSE technology.
+rtsp2fmp4 is a proxy server written in C++, whose main function is to access the RTSP server of the camera through live555, package H264 as FMP4 in real time, and send it to the requesting client. The client supports the live broadcast of delayed HTML5 in milliseconds through WebSocket and MSE technology.
 
-Rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Windows/Linux.
+rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Windows/Linux.
 
 ### Dependencies 
 
@@ -32,7 +32,7 @@ Rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Wind
 [
     {
         "source" : "/101",
-        "target" : "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"
+        "target" : "rtsp://user:password@ipaddr/Streaming/Channels/101"
     }
 ]
 ```

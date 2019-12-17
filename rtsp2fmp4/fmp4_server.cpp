@@ -142,11 +142,11 @@ void FMp4Server::on_open(connection_hdl hdl) {
 			MyRTSPClient* rc = MyRTSPClient::createNew(*env, url.data());
 			if (rc) {
 				rc->fmp4Server = this;
+				rc->connect();
 				FMp4Muxer muxer;
 				boost::unique_lock<boost::shared_mutex> l(rc->mu);
 				rc->conns.insert(std::pair<connection_hdl, FMp4Muxer>(hdl, muxer));
-				m_rcs.insert(rc);
-				rc->connect();
+				m_rcs.insert(rc);				
 			}
 		}
 	}

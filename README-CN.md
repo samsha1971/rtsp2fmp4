@@ -30,7 +30,7 @@ rtsp2fmp4是个原型演示，目前支持Windows/Linux的CMake编译。
     [
         {
             "source": "/101",
-            "target": "rtsp://sam:ibc960014@10.200.2.229/Streaming/Channels/101"
+            "target": "rtsp://user:password@ipaddr/Streaming/Channels/101"
         }
     ]
 

@@ -23,17 +23,20 @@ rtsp2fmp4是个原型演示，目前支持Windows/Linux的CMake编译。
 ### 测试方法
 
 1. 编译live555、boost 1.69.0，修改源码目录下的CMakeLists.txt，确认include、lib目录位置。
+
 2. 配置Visual Studio 2017/2019的跨平台功能。
+
 3. 修改 config.json：
-
-
     [
         {
             "source": "/101",
             "target": "rtsp://user:password@ipaddr/Streaming/Channels/101"
         }
     ]
+增加redirect的参数支持，比如：
+```
+ws://10.200.2.46:9002/?redirect=rtsp://user:password@ipaddr/Streaming/Channels/101
+```
+4. 运行#rtsp2fmp4，启动服务，服务端口为 9002，退出服务运行#rtsp2fmp4 -q。
 
-2. 运行#rtsp2fmp4，启动服务，服务端口为 9002，退出服务运行#rtsp2fmp4 -q。
-
-3. 测试依赖 nodejs，在 exmaple 目录下运行#node http.js，网页访问：http://localhost:9080/index.html。
+5. 测试依赖 nodejs，在 exmaple 目录下运行#node http.js，网页访问：http://localhost:9080/index.html。

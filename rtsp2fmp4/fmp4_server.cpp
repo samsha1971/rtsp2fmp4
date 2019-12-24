@@ -8,6 +8,7 @@
 #include <string>
 #include <locale>
 #include <fstream>
+#include <boost/regex.hpp>
 
 #include <boost/thread/thread.hpp>
 
@@ -127,7 +128,36 @@ void FMp4Server::on_open(connection_hdl hdl) {
 	{
 		request req = m_server.get_con_from_hdl(hdl)->get_request();
 		std::string uri = req.get_uri();
-		std::string url = proxy.at(uri);
+		std::string url = "";
+
+		std::string::const_iterator begin = uri.begin();
+		std::string::const_iterator end = uri.end();
+		boost::smatch what;
+		boost::regex reg("\\?redirect\\=(.*)");
+		if (boost::regex_search(begin, end, what, reg))
+		{
+			/*
+			for (int i = 0; i < what.size(); i++) {
+				std::string msg(what[i].first, what[i].second);
+				std::cout << msg << std::endl;
+			}
+			*/
+			if (what.size() == 2) {
+				std::string msg(what[1].first, what[1].second);
+				url = msg;
+			}
+			else
+			{
+				std::cout << "Error " << uri << std::endl;
+				return;
+			}
+		}
+		else
+		{
+			url = proxy.at(uri);
+		}
+
+		
 		bool found = false;
 		for (auto rc : m_rcs) {
 			if (url == rc->url()) {

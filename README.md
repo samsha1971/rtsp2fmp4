@@ -36,6 +36,9 @@ rtsp2fmp4 is a prototype demo that currently supports CMake compilation for Wind
     }
 ]
 ```
-4.  Run #rtsp2fmp4 and service on port 9002, exit service run # rtsp2fmp4-q. 
-
-5. The test relies on nodejs, in exmaple directory run #node http.js, web access: http://localhost:9080/index.html.
+Add redirect parameter support, such as:
+```
+ws://10.200.2.46:9002/?redirect=rtsp://user:password@ipaddr/Streaming/Channels/101
+```
+4.  Run #rtsp2fmp4 and service on port 9002, exit service run `# rtsp2fmp4 -q`. 
+5.  The test relies on nodejs, in exmaple directory run #node http.js, web access: http://localhost:9080/index.html.
